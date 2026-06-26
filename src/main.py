@@ -274,7 +274,12 @@ def push_status(push_url, success, latency_ms):
 
 
 def main():
-    log.info(f"Starting proxy-monitor (interval={CHECK_INTERVAL}s)")
+    check_interval = int(os.getenv("CHECK_INTERVAL", "300"))
+    push_interval = check_interval * 2
+    log.info(f"Starting proxy-monitor (check={check_interval}s, push={push_interval}s)")
+
+    last_push = 0
+    last_results = {}
 
     while True:
         try:
@@ -291,7 +296,6 @@ def main():
             # Connect to Uptime Kuma
             api = UptimeKumaApi(UK_URL)
             api.login(UK_USER, UK_PASS)
-
             push_urls = ensure_monitors(api, keys)
             api.disconnect()
 
@@ -299,16 +303,23 @@ def main():
             for name, outbound in keys:
                 log.info(f"Testing: {name}")
                 success, latency = test_proxy(outbound)
-                log.info(f"  {'OK' if success else 'FAIL'} ({latency}ms)" if success else f"  FAIL")
+                last_results[name] = (success, latency)
+                log.info(f"  {'OK' if success else 'FAIL'} ({latency}ms)")
 
-                if name in push_urls:
-                    push_status(push_urls[name], success, latency)
+            # Push every push_interval
+            now = time.time()
+            if now - last_push >= push_interval:
+                for name, (success, latency) in last_results.items():
+                    if name in push_urls:
+                        push_status(push_urls[name], success, latency)
+                log.info(f"Pushed {len(last_results)} results to Uptime Kuma")
+                last_push = now
 
         except Exception as e:
             log.error(f"Check cycle failed: {e}", exc_info=True)
 
-        log.info(f"Sleeping {CHECK_INTERVAL}s...")
-        time.sleep(CHECK_INTERVAL)
+        log.info(f"Sleeping {check_interval}s...")
+        time.sleep(check_interval)
 
 
 if __name__ == "__main__":
