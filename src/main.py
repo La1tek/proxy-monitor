@@ -21,7 +21,7 @@ UK_USER = os.getenv("UPTIME_KUMA_USER")
 UK_PASS = os.getenv("UPTIME_KUMA_PASS")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "60"))
 XRAY_BIN = "/opt/xray/xray"
-TEST_URL = "http://1.1.1.1"
+TEST_URL = "http://cp.cloudflare.com/generate_204"
 PROXY_PORT = 10899
 
 
@@ -187,7 +187,7 @@ def test_proxy(outbound):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        time.sleep(2)
+        time.sleep(3)
 
         start = time.time()
         try:
@@ -245,7 +245,7 @@ def ensure_monitors(api, keys):
             api.add_monitor(
                 type=MonitorType.PUSH,
                 name=name,
-                interval=CHECK_INTERVAL,
+                interval=CHECK_INTERVAL * 2,
                 parent=group_id,
             )
             log.info(f"Created push monitor: {name}")
@@ -310,10 +310,8 @@ def push_status(push_url, success, latency_ms):
 
 def main():
     check_interval = int(os.getenv("CHECK_INTERVAL", "300"))
-    push_interval = check_interval * 2
-    log.info(f"Starting proxy-monitor (check={check_interval}s, push={push_interval}s)")
+    log.info(f"Starting proxy-monitor (check={check_interval}s, push=every cycle)")
 
-    last_push = 0
     last_results = {}
 
     while True:
@@ -341,14 +339,11 @@ def main():
                 last_results[name] = (success, latency)
                 log.info(f"  {'OK' if success else 'FAIL'} ({latency}ms)")
 
-            # Push every push_interval
-            now = time.time()
-            if now - last_push >= push_interval:
-                for name, (success, latency) in last_results.items():
-                    if name in push_urls:
-                        push_status(push_urls[name], success, latency)
-                log.info(f"Pushed {len(last_results)} results to Uptime Kuma")
-                last_push = now
+            # Push every cycle
+            for name, (success, latency) in last_results.items():
+                if name in push_urls:
+                    push_status(push_urls[name], success, latency)
+            log.info(f"Pushed {len(last_results)} results to Uptime Kuma")
 
         except Exception as e:
             log.error(f"Check cycle failed: {e}", exc_info=True)
