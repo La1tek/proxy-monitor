@@ -240,7 +240,7 @@ def ensure_monitors(api, keys):
             created = True
 
     # Re-fetch to get push URLs (add_monitor doesn't return them)
- if created:
+    if created:
         existing = api.get_monitors()
         existing_map = {m["name"]: m for m in existing}
 
