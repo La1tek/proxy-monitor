@@ -239,7 +239,7 @@ def ensure_monitors(api, keys):
             log.info(f"Created push monitor: {name}")
             created = True
 
-    # Re-fetch to get push URLs (add_monitor doesn't return them)
+    # Re-fetch to get monitor IDs (pushUrl is not returned by the API)
     if created:
         existing = api.get_monitors()
         existing_map = {m["name"]: m for m in existing}
@@ -248,8 +248,10 @@ def ensure_monitors(api, keys):
     for name, _ in keys:
         m = existing_map.get(name)
         if m:
-            push_urls[name] = m.get("pushUrl", "")
-            log.info(f"Push URL for {name}: {push_urls[name] or 'NONE'}")
+            # Build push URL manually from monitor ID
+            push_url = f"{UK_URL}/api/push/{m['id']}"
+            push_urls[name] = push_url
+            log.info(f"Push URL for {name}: {push_url}")
 
     return push_urls
 
