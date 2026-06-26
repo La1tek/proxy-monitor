@@ -248,8 +248,13 @@ def ensure_monitors(api, keys):
     for name, _ in keys:
         m = existing_map.get(name)
         if m:
-            # Build push URL manually from monitor ID
-            push_url = f"{UK_URL}/api/push/{m['id']}"
+            # Build push URL from monitor's pushToken
+            push_token = m.get("pushToken", "")
+            if push_token:
+                push_url = f"{UK_URL}/api/push/{push_token}"
+            else:
+                push_url = f"{UK_URL}/api/push/{m['id']}"
+                log.warning(f"No pushToken for {name}, using monitor ID")
             push_urls[name] = push_url
             log.info(f"Push URL for {name}: {push_url}")
 
