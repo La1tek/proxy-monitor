@@ -258,7 +258,30 @@ def ensure_monitors(api, keys):
             push_urls[name] = push_url
             log.info(f"Push URL for {name}: {push_url}")
 
+    update_status_page(api, group_id)
+
     return push_urls
+
+
+def update_status_page(api, group_id):
+    """Create/update status page with push monitors."""
+    monitors = api.get_monitors()
+    key_monitors = [m["id"] for m in monitors if m.get("parent") == group_id and m.get("type") != MonitorType.GROUP]
+
+    try:
+        api.save_status_page(
+            slug="keys-status",
+            title="Live Status — Proxy Keys",
+            published=True,
+            publicGroupList=[{
+                "name": "Proxy Keys (live)",
+                "weight": 0,
+                "monitorList": [{"id": mid} for mid in key_monitors]
+            }],
+        )
+        log.info(f"Status page updated: {UK_URL}/status/keys-status")
+    except Exception as e:
+        log.warning(f"Status page update failed: {e}")
 
 
 def push_status(push_url, success, latency_ms):
