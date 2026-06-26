@@ -222,24 +222,34 @@ def ensure_monitors(api, keys):
     else:
         group_id = group["id"]
 
-    push_urls = {}
+    created = False
     for name, _ in keys:
         if name in existing_map and existing_map[name].get("type") == MonitorType.PUSH:
-            m = existing_map[name]
-            push_urls[name] = m.get("pushUrl", "")
+            continue
         else:
             # Delete old non-push if exists
             if name in existing_map:
                 api.delete_monitor(existing_map[name]["id"])
-
-            r = api.add_monitor(
+            api.add_monitor(
                 type=MonitorType.PUSH,
                 name=name,
                 interval=CHECK_INTERVAL,
                 parent=group_id,
             )
-            push_urls[name] = r.get("pushUrl", "")
             log.info(f"Created push monitor: {name}")
+            created = True
+
+    # Re-fetch to get push URLs (add_monitor doesn't return them)
+ if created:
+        existing = api.get_monitors()
+        existing_map = {m["name"]: m for m in existing}
+
+    push_urls = {}
+    for name, _ in keys:
+        m = existing_map.get(name)
+        if m:
+            push_urls[name] = m.get("pushUrl", "")
+            log.info(f"Push URL for {name}: {push_urls[name] or 'NONE'}")
 
     return push_urls
 
