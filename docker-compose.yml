@@ -1,0 +1,9 @@
+services:
+  proxy-monitor:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - xray-data:/opt/xray
+volumes:
+  xray-data:
