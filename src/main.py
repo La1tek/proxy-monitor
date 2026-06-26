@@ -227,12 +227,12 @@ def ensure_monitors(api, keys):
         if name in existing_map and existing_map[name].get("type") == MonitorType.PUSH:
             # Update interval to 2x CHECK_INTERVAL
             m = existing_map[name]
-            if m.get("interval", 0) != CHECK_INTERVAL:
+            if m.get("interval", 0) != CHECK_INTERVAL * 2:
                 api.delete_monitor(m["id"])
                 api.add_monitor(
                     type=MonitorType.PUSH,
                     name=name,
-                    interval=CHECK_INTERVAL,
+                    interval=CHECK_INTERVAL * 2,
                     parent=group_id,
                 )
                 log.info(f"Updated interval for {name}")
